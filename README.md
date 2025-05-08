@@ -28,13 +28,13 @@ cd submit_latex
 ### 🔧 Basic command
 
 ```bash
-python3 submit_latex.py main.tex -o submission.tex
+python submit_latex.py main.tex -o submission.tex
 ```
 
 ### 🔍 Full example with all options
 
 ```bash
-python3 submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor
+python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor
 ```
 
 ---
