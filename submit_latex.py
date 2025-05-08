@@ -43,44 +43,54 @@ def extract_external_docs(tex):
     return re.findall(r'\\myexternaldocument(?:\[[^\]]*\])?\{([^}]+)\}', tex)
 
 
-def remove_balanced_command(text, command):
-    pattern = re.compile(r'\\' + re.escape(command) + r'\s*\{', re.DOTALL)
-    result = ''
+def find_balanced_braces(text, start):
+    """Find the range of the balanced {...} starting at index `start` (which must be the '{')."""
+    assert text[start] == '{', "Expected opening brace at start position"
+    depth = 1
+    i = start + 1
+    while i < len(text) and depth > 0:
+        if text[i] == '{':
+            depth += 1
+        elif text[i] == '}':
+            depth -= 1
+        i += 1
+    return start, i  # inclusive start, exclusive end
+
+def remove_command_instances(text, command):
+    """Remove all instances of a command with or without a backslash, handling balanced braces."""
+    pattern = re.compile(r'(\\?)' + re.escape(command) + r'\s*(?=\{)')
     pos = 0
+    output = ''
+
     while True:
         match = pattern.search(text, pos)
         if not match:
-            result += text[pos:]
+            output += text[pos:]
             break
-        result += text[pos:match.start()]
-        start = match.end()
-        i = start
-        depth = 1
-        while i < len(text) and depth > 0:
-            if text[i] == '{':
-                depth += 1
-            elif text[i] == '}':
-                depth -= 1
-            i += 1
-        if depth == 0:
-            result += text[start:i - 1]  # keep inner content only
-            pos = i
-        else:
-            result += text[match.start():]
-            break
-    return result
 
+        output += text[pos:match.start()]
+        brace_start = match.end()
+        if brace_start >= len(text) or text[brace_start] != '{':
+            # Command not followed by a proper brace block
+            pos = match.end()
+            continue
+
+        try:
+            start, end = find_balanced_braces(text, brace_start)
+            pos = end
+        except AssertionError:
+            # Failed to find balanced braces, skip safely
+            pos = brace_start + 1
+
+    return output
 
 def remove_commands(tex, commands_to_remove):
     if not commands_to_remove:
         return tex
 
     for cmd in commands_to_remove:
-        cmd = cmd.lstrip('\')
-        if cmd == 'hl':
-            tex = remove_balanced_command(tex, 'hl')
-            continue
-        tex = re.sub(r'\\' + re.escape(cmd) + r'(\{[^{}]*\})?', '', tex)
+        cmd = cmd.lstrip('\\')
+        tex = remove_command_instances(tex, cmd)
     return tex
 
 
