@@ -76,7 +76,7 @@ def remove_commands(tex, commands_to_remove):
         return tex
 
     for cmd in commands_to_remove:
-        cmd = cmd.lstrip('\\')
+        cmd = cmd.lstrip('\')
         if cmd == 'hl':
             tex = remove_balanced_command(tex, 'hl')
             continue
