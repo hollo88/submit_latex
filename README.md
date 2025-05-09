@@ -8,10 +8,11 @@ This Python script helps flatten a LaTeX project into a single `.tex` file, suit
 
 - Recursively processes `\input{}` and `\subfile{}` commands
 - Embeds bibliography files (`.bib`) via `filecontents*`
-- Optionally includes local style files (`.sty`) and auxiliary files (`.aux`)
-- Preserves paragraph spacing and empty lines
-- Can strip LaTeX comments and remove specified commands (e.g. `\hl{}`, `\textcolor{}`)
-- Can strip LaTeX comments and remove specified commands with their content (e.g. `\stout{}`)
+- Optionally includes local style files (`.sty`)
+- Optionally includes auxiliary files (`.aux`) for cross references
+- Can strip LaTeX comments
+- Can remove specified commands (e.g. `\hl{}`, `\textcolor{}`)
+- Can remove specified commands with their content (e.g. `\stout{}`)
 
 ---
 
