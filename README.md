@@ -11,6 +11,7 @@ This Python script helps flatten a LaTeX project into a single `.tex` file, suit
 - Optionally includes local style files (`.sty`) and auxiliary files (`.aux`)
 - Preserves paragraph spacing and empty lines
 - Can strip LaTeX comments and remove specified commands (e.g. `\hl{}`, `\textcolor{}`)
+- Can strip LaTeX comments and remove specified commands with their content (e.g. `\stout{}`)
 
 ---
 
@@ -34,7 +35,7 @@ python submit_latex.py main.tex -o submission.tex
 ### 🔍 Full example with all options
 
 ```bash
-python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor
+python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor -p \sout
 ```
 
 ---
@@ -48,6 +49,7 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor
 | `-s`         | Include local `.sty` files used via `\usepackage{}`        |
 | `-a`         | Include `.aux` files used for cross-referencing            |
 | `-r CMD ...` | Remove specified LaTeX commands (but keep their content)   |
+| `-p CMD ...` | Remove specified LaTeX commands (delete their content)     |
 
 ---
 
@@ -61,15 +63,19 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor
     pdflatex main.tex
     pdflatex main.tex
     ```
-    Note: If you are using biber instead of bibtex, use the command biber main (not main.aux).
+    Note 1: If you are using biber instead of bibtex, use the command "biber main".
+   
+    Note 2: You can also download your Overleaf project, but you’ll need to download the .aux file (e.g., supplementary.aux) if you have cross-references — Overleaf → “Logs and output files” → “Other logs and files” (at the bottom of the page).
 
-2. **Flatten the LaTeX document**:
+
+3. **Flatten the LaTeX document**:
 
     ```bash
-    python3 submit_latex.py main.tex -o submission.tex -csa
+    python submit_latex.py main.tex -o submission.tex -csa -r \hl -p \sout
     ```
+    Note: It will create a sinle tex file ("submission.tex"), removing the comments, including local .sty files and cross referencing data, removing the highlighting command (`\hl{}`) and deleting the crossed text (inside `\sout{}`).
 
-3. **Compile the submission version** to check:
+4. **Compile the submission version** to check:
 
     ```bash
     pdflatex submission.tex
@@ -77,7 +83,9 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor
     pdflatex submission.tex
     pdflatex submission.tex
     ```
-    Note: If you are using biber instead of bibtex, use the command biber main (not submission.aux).
+    Note 1: If you are using biber instead of bibtex, use the command "biber main".
+
+    Note 2: If you're using Overleaf, you can upload "submission.tex" to your project and compile it directly.
 ---
 
 ## ⚠️ Important Notes
