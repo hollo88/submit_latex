@@ -56,8 +56,8 @@ def find_balanced_braces(text, start):
         i += 1
     return start, i  # inclusive start, exclusive end
 
-def remove_command_instances(text, command):
-    """Remove all instances of a command with or without a backslash, handling balanced braces."""
+def remove_command_instances(text, command, purge=True):
+    """Remove all instances of a command. If `purge` is False, keep the content inside the braces."""
     pattern = re.compile(r'(\\?)' + re.escape(command) + r'\s*(?=\{)')
     pos = 0
     output = ''
@@ -71,30 +71,39 @@ def remove_command_instances(text, command):
         output += text[pos:match.start()]
         brace_start = match.end()
         if brace_start >= len(text) or text[brace_start] != '{':
-            # Command not followed by a proper brace block
             pos = match.end()
             continue
 
         try:
             start, end = find_balanced_braces(text, brace_start)
-            pos = end
+            if purge:
+                # Remove command and content
+                pos = end
+            else:
+                # Keep content, remove command only
+                output += text[start + 1:end - 1]
+                pos = end
         except AssertionError:
-            # Failed to find balanced braces, skip safely
             pos = brace_start + 1
 
     return output
 
-def remove_commands(tex, commands_to_remove):
-    if not commands_to_remove:
-        return tex
 
-    for cmd in commands_to_remove:
-        cmd = cmd.lstrip('\\')
-        tex = remove_command_instances(tex, cmd)
+def remove_commands(tex, remove_list=None, purge_list=None):
+    if remove_list:
+        for cmd in remove_list:
+            cmd = cmd.lstrip('\\')
+            tex = remove_command_instances(tex, cmd, purge=False)
+
+    if purge_list:
+        for cmd in purge_list:
+            cmd = cmd.lstrip('\\')
+            tex = remove_command_instances(tex, cmd, purge=True)
+
     return tex
 
 
-def recursive_embed(filename, seen_files, remove_comments, is_main_file=False, commands_to_remove=None):
+def recursive_embed(filename, seen_files, remove_comments, is_main_file=False, remove_list=None, purge_list=None):
     if filename in seen_files:
         return ''
     seen_files.add(filename)
@@ -105,8 +114,7 @@ def recursive_embed(filename, seen_files, remove_comments, is_main_file=False, c
     base_dir = os.path.dirname(filename)
     tex = read_file_strip_comments(filename, remove_comments)
 
-    if commands_to_remove:
-        tex = remove_commands(tex, commands_to_remove)
+    tex = remove_commands(tex, remove_list=remove_list, purge_list=purge_list)
 
     if not is_main_file:
         tex = re.sub(r'\\documentclass(?:\[[^\]]*\])?\{[^}]+\}', '', tex)
@@ -118,7 +126,8 @@ def recursive_embed(filename, seen_files, remove_comments, is_main_file=False, c
         if not sub_filename.endswith('.tex'):
             sub_filename += '.tex'
         sub_path = os.path.join(base_dir, sub_filename)
-        return recursive_embed(sub_path, seen_files, remove_comments, is_main_file=False, commands_to_remove=commands_to_remove)
+        return recursive_embed(sub_path, seen_files, remove_comments, is_main_file=False,
+                               remove_list=remove_list, purge_list=purge_list)
 
     tex = re.sub(r'\\(?:input|subfile)\{([^}]+)\}', replacer, tex)
     return tex
@@ -129,17 +138,24 @@ def create_filecontents_block(filename, content):
             content.rstrip() + "\n\n\\end{filecontents*}\n\n")
 
 
-def submit_latex(input_file, output_file, remove_comments, include_sty, include_external, commands_to_remove=None):
+def submit_latex(input_file, output_file, remove_comments, include_sty, include_external,
+                 remove_list=None, purge_list=None):
     seen = set()
-    main_content = recursive_embed(input_file, seen, remove_comments, is_main_file=True, commands_to_remove=commands_to_remove)
+    main_content = recursive_embed(
+        input_file,
+        seen,
+        remove_comments,
+        is_main_file=True,
+        remove_list=remove_list,
+        purge_list=purge_list
+    )
 
     bib_blocks = ""
     for bib in extract_bibliographies(main_content):
         if not os.path.exists(bib):
             raise FileNotFoundError(f"Error: Required bibliography file '{bib}' not found")
         content = read_file_strip_comments(bib, remove_comments)
-        if commands_to_remove:
-            content = remove_commands(content, commands_to_remove)
+        content = remove_commands(content, remove_list=remove_list, purge_list=purge_list)
         bib_blocks += create_filecontents_block(bib, content)
 
     sty_blocks = ""
@@ -151,8 +167,7 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
                     name += '.sty'
                 if os.path.exists(name):
                     content = read_file_strip_comments(name, remove_comments)
-                    if commands_to_remove:
-                        content = remove_commands(content, commands_to_remove)
+                    content = remove_commands(content, remove_list=remove_list, purge_list=purge_list)
                     sty_blocks += create_filecontents_block(name, content)
 
     aux_blocks = ""
@@ -162,8 +177,7 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
             if not os.path.exists(aux_file):
                 raise FileNotFoundError(f"Error: Required external document file '{aux_file}' not found")
             content = read_file_strip_comments(aux_file, remove_comments)
-            if commands_to_remove:
-                content = remove_commands(content, commands_to_remove)
+            content = remove_commands(content, remove_list=remove_list, purge_list=purge_list)
             aux_blocks += create_filecontents_block(aux_file, content)
 
     full_output = bib_blocks + sty_blocks + aux_blocks + main_content
@@ -173,6 +187,7 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
     print(f"Successfully created flattened LaTeX file: {output_file}")
 
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Flatten LaTeX document with dependencies.")
     parser.add_argument("input", help="Main LaTeX input file")
@@ -180,7 +195,8 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--strip-comments", action="store_true", help="Remove comments and empty lines")
     parser.add_argument("-s", "--include-sty", action="store_true", help="Embed .sty files")
     parser.add_argument("-a", "--include-aux", action="store_true", help="Embed .aux files")
-    parser.add_argument("-r", "--remove", nargs='+', help="Commands to remove (e.g., 'hl' 'textcolor{red}')")
+    parser.add_argument("-r", "--remove", nargs='+', help="Commands to remove (e.g., 'hl' keeps content, removes only the command)")
+    parser.add_argument("-p", "--purge", nargs='+', help="Commands to completely purge (remove command and its argument block)")
 
     args = parser.parse_args()
 
@@ -191,7 +207,8 @@ if __name__ == "__main__":
             args.strip_comments,
             args.include_sty,
             args.include_aux,
-            args.remove
+            args.remove,
+            args.purge
         )
     except FileNotFoundError as e:
         print(f"Error: {str(e)}")
