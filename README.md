@@ -12,7 +12,7 @@ This Python script helps flatten a LaTeX project into a single `.tex` file, suit
 - Optionally includes auxiliary files (`.aux`) for cross references
 - Can strip LaTeX comments
 - Can remove specified commands (e.g. `\hl{}`, `\textcolor{}`)
-- Can remove specified commands with their content (e.g. `\stout{}`)
+- Can remove specified commands with their argument block (e.g. `\sout{}`)
 
 ---
 
