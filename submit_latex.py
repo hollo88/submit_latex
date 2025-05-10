@@ -5,17 +5,26 @@ import argparse
 
 def read_file_strip_comments(filename, remove_comments):
     with open(filename, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-
+        content = f.read()
+    
     if not remove_comments:
-        return ''.join(lines)
-
+        return content
+    
+    # Split into lines while preserving line endings
+    lines = content.splitlines(keepends=True)
+    
     cleaned_lines = []
     for line in lines:
         if line.strip().startswith('%'):
+            # Skip full-line comments but preserve empty lines
+            if line.strip() == '%':
+                cleaned_lines.append('\n')  # preserve standalone % as empty line
             continue
+        
+        # Remove inline comments but preserve the rest of the line including empty lines
         cleaned_line = re.sub(r'(?<!\\)%.*', '', line)
         cleaned_lines.append(cleaned_line)
+    
     return ''.join(cleaned_lines)
 
 
@@ -109,7 +118,9 @@ def recursive_embed(filename, seen_files, remove_comments, is_main_file=False, r
     seen_files.add(filename)
 
     if not os.path.exists(filename):
-        return f"% Missing file: {filename}\n"
+        raise FileNotFoundError(f"Required input file '{filename}' not found")
+        # Remove this line:
+        # return f"% Missing file: {filename}\n"
 
     base_dir = os.path.dirname(filename)
     tex = read_file_strip_comments(filename, remove_comments)
@@ -141,14 +152,18 @@ def create_filecontents_block(filename, content):
 def submit_latex(input_file, output_file, remove_comments, include_sty, include_external,
                  remove_list=None, purge_list=None):
     seen = set()
-    main_content = recursive_embed(
-        input_file,
-        seen,
-        remove_comments,
-        is_main_file=True,
-        remove_list=remove_list,
-        purge_list=purge_list
-    )
+    try:
+        main_content = recursive_embed(
+            input_file,
+            seen,
+            remove_comments,
+            is_main_file=True,
+            remove_list=remove_list,
+            purge_list=purge_list
+        )
+    except FileNotFoundError as e:
+        print(f"Error: {str(e)}")
+        exit(1)
 
     bib_blocks = ""
     for bib in extract_bibliographies(main_content):
