@@ -51,7 +51,7 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor -p 
 | `-a`         | Include `.aux` files used for cross-referencing            |
 | `-r CMD ...` | Remove specified LaTeX commands (but keep their content)   |
 | `-p CMD ...` | Remove specified LaTeX commands (delete their content)     |
-| `-g	       | Generate PDF after flattening (requires pdflatex/biber)    |
+| `-g`	       | Generate PDF after flattening (requires pdflatex/biber)    |
 
 ---
 
