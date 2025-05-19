@@ -1,7 +1,7 @@
 import os
 import re
 import argparse
-
+import subprocess
 
 def read_file_strip_comments(filename, remove_comments):
     with open(filename, 'r', encoding='utf-8') as f:
@@ -212,6 +212,7 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--include-aux", action="store_true", help="Embed .aux files")
     parser.add_argument("-r", "--remove", nargs='+', help="Commands to remove (e.g., 'hl' keeps content, removes only the command)")
     parser.add_argument("-p", "--purge", nargs='+', help="Commands to completely purge (remove command and its argument block)")
+    parser.add_argument("-g", "--generate-pdf", action="store_true",help="Generate PDF after flattening (requires pdflatex)")
 
     args = parser.parse_args()
 
@@ -225,6 +226,45 @@ if __name__ == "__main__":
             args.remove,
             args.purge
         )
+
+        if args.generate_pdf:
+            print("\nGenerating PDF...")
+            base_name = os.path.splitext(args.output)[0]
+    
+            try:
+                # Check for biblatex
+                with open(args.output, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    uses_biblatex = 'biblatex' in content
+        
+                # First pdflatex run (allow warnings)
+                subprocess.run(['pdflatex', '-interaction=nonstopmode', args.output],check=False)  # Don't fail on warnings
+        
+                # Bibliography processing
+                if uses_biblatex:
+                    bib_result = subprocess.run(['biber', base_name], capture_output=True, text=True)
+                    if bib_result.returncode != 0:
+                        print(f"Biber warning: {bib_result.stderr}")
+                else:
+                    bib_result = subprocess.run(['bibtex', base_name], capture_output=True, text=True)
+                    if bib_result.returncode != 0:
+                        print(f"BibTeX warning: {bib_result.stderr}")
+        
+                # Final runs (allow warnings)
+                subprocess.run(['pdflatex', '-interaction=nonstopmode', args.output], check=False)
+                subprocess.run(['pdflatex', '-interaction=nonstopmode', args.output], check=False)
+        
+                # Verify PDF was created
+                if os.path.exists(f"{base_name}.pdf"):
+                    print(f"\nPDF successfully generated: {base_name}.pdf")
+                else:
+                    raise RuntimeError("PDF file was not created despite compilation attempts")
+            
+            except Exception as e:
+                print(f"\nWarning: PDF generation completed with minor issues: {str(e)}")
+                if os.path.exists(f"{base_name}.pdf"):
+                    print("...but a PDF file was still generated (check for warnings)")
+
     except FileNotFoundError as e:
         print(f"Error: {str(e)}")
         exit(1)
