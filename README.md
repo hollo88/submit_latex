@@ -51,6 +51,7 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor -p 
 | `-a`         | Include `.aux` files used for cross-referencing            |
 | `-r CMD ...` | Remove specified LaTeX commands (but keep their content)   |
 | `-p CMD ...` | Remove specified LaTeX commands (delete their content)     |
+| `-g	       | Generate PDF after flattening (requires pdflatex/biber)    |
 
 ---
 
@@ -74,9 +75,11 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor -p 
     ```bash
     python submit_latex.py main.tex -o submission.tex -csa -r \hl -p \sout
     ```
-    Note: It will create a sinle tex file ("submission.tex"), removing the comments, including local .sty files and cross referencing data, removing the highlighting command (`\hl{}`) and deleting the crossed text (inside `\sout{}`).
+    Note1: It will create a single tex file ("submission.tex"), removing the comments, including local .sty files and cross referencing data, removing the highlighting command (`\hl{}`) and deleting the crossed text (inside `\sout{}`).
 
-4. **Compile the submission version** to check:
+   Note2: If latex is installed, with the -g option it will generate "submission.pdf", by running the commands from the next step.
+
+5. **Compile the submission version** to check:
 
     ```bash
     pdflatex submission.tex
@@ -84,7 +87,7 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor -p 
     pdflatex submission.tex
     pdflatex submission.tex
     ```
-    Note 1: If you are using biber instead of bibtex, use the command "biber main".
+    Note 1: If you are using biber instead of bibtex, use the command "biber submission".
 
     Note 2: If you're using Overleaf, you can upload "submission.tex" to your project and compile it directly.
 ---
