@@ -267,7 +267,8 @@ if __name__ == "__main__":
             try:
                 # When -b is used, we already have the .bbl file included
                 if args.include_bbl:
-                    # Single pdflatex run is sufficient
+                    # Two pdflatex run is sufficient
+                    subprocess.run(['pdflatex', '-interaction=nonstopmode', args.output], check=False)
                     subprocess.run(['pdflatex', '-interaction=nonstopmode', args.output], check=False)
                 else:
                     # Normal compilation sequence
