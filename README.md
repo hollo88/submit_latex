@@ -80,7 +80,7 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor -p 
 
    Note2: If latex is installed, with the -g option it will generate "submission.pdf", by running the commands from the next step.
 
-   Note 3: Using the -b option includes the precompiled "main.bbl" file instead of relying on a ".bib" file for bibliography generation. This is particularly useful when the journal’s submission system supports only a single pdflatex run and does not execute `biber` or `bibtex`.
+   Note 3: Using the -b option includes the precompiled "main.bbl" file instead of relying on a ".bib" file for bibliography generation. This is particularly useful when the journal’s submission system supports only pdflatex run and does not execute `biber` or `bibtex`.
 
 5. **Compile the submission version** to check:
 
@@ -94,7 +94,7 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor -p 
 
     Note 2: If you're using Overleaf, you can upload "submission.tex" to your project and compile it directly.
 
-    Note3: If the -b option is used, compiling with a single `pdflatex submission.tex` is sufficient. Do not run `bibtex` or `biber`, as the bibliography is already included via the `.bbl` file.
+    Note3: If the -b option is used, compiling with two `pdflatex submission.tex` is sufficient. Do not run `bibtex` or `biber`, as the bibliography is already included via the `.bbl` file.
 ---
 
 ## ⚠️ Important Notes
