@@ -49,6 +49,7 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor -p 
 | `-c`         | Remove LaTeX comments                                      |
 | `-s`         | Include local `.sty` files used via `\usepackage{}`        |
 | `-a`         | Include `.aux` files used for cross-referencing            |
+| `-b`         | Include `.bbl` file instead of the .bib file for references|
 | `-r CMD ...` | Remove specified LaTeX commands (but keep their content)   |
 | `-p CMD ...` | Remove specified LaTeX commands (delete their content)     |
 | `-g`	       | Generate PDF after flattening (requires pdflatex/biber)    |
@@ -73,11 +74,13 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor -p 
 3. **Flatten the LaTeX document**:
 
     ```bash
-    python submit_latex.py main.tex -o submission.tex -csa -r \hl -p \sout
+    python submit_latex.py main.tex -o submission.tex -csab -r \hl -p \sout
     ```
     Note1: It will create a single tex file ("submission.tex"), removing the comments, including local .sty files and cross referencing data, removing the highlighting command (`\hl{}`) and deleting the crossed text (inside `\sout{}`).
 
    Note2: If latex is installed, with the -g option it will generate "submission.pdf", by running the commands from the next step.
+
+   Note 3: Using the -b option includes the precompiled "main.bbl" file instead of relying on a ".bib" file for bibliography generation. This is particularly useful when the journal’s submission system supports only a single pdflatex run and does not execute `biber` or `bibtex`.
 
 5. **Compile the submission version** to check:
 
@@ -87,9 +90,11 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor -p 
     pdflatex submission.tex
     pdflatex submission.tex
     ```
-    Note 1: If you are using biber instead of bibtex, use the command "biber submission".
+    Note 1: If you are using biber instead of bibtex, use the command `biber submission`.
 
     Note 2: If you're using Overleaf, you can upload "submission.tex" to your project and compile it directly.
+
+    Note3: If the -b option is used, compiling with a single `pdflatex submission.tex` is sufficient. Do not run `bibtex` or `biber`, as the bibliography is already included via the `.bbl` file.
 ---
 
 ## ⚠️ Important Notes
