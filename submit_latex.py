@@ -3,6 +3,14 @@ import re
 import argparse
 import subprocess
 
+def extract_bbl_file(tex):
+    # Look for \bibliography or \addbibresource commands to guess the .bbl filename
+    bib_matches = re.findall(r'\\(?:bibliography|addbibresource)\{([^}]+)\}', tex)
+    if bib_matches:
+        base_name = os.path.splitext(os.path.basename(args.input))[0]
+        return f"{base_name}.bbl"
+    return None
+
 def read_file_strip_comments(filename, remove_comments):
     with open(filename, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -150,7 +158,7 @@ def create_filecontents_block(filename, content):
 
 
 def submit_latex(input_file, output_file, remove_comments, include_sty, include_external,
-                 remove_list=None, purge_list=None):
+                 include_bbl, remove_list=None, purge_list=None):
     seen = set()
     try:
         main_content = recursive_embed(
@@ -162,16 +170,39 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
             purge_list=purge_list
         )
     except FileNotFoundError as e:
-        print(f"Error: {str(e)}")
+        print(str(e))  # Removed "Error:" prefix
         exit(1)
 
     bib_blocks = ""
-    for bib in extract_bibliographies(main_content):
-        if not os.path.exists(bib):
-            raise FileNotFoundError(f"Error: Required bibliography file '{bib}' not found")
-        content = read_file_strip_comments(bib, remove_comments)
-        content = remove_commands(content, remove_list=remove_list, purge_list=purge_list)
-        bib_blocks += create_filecontents_block(bib, content)
+    # Only process .bib files if -b is NOT specified
+    if not include_bbl:
+        for bib in extract_bibliographies(main_content):
+            if not os.path.exists(bib):
+                raise FileNotFoundError(f"Required bibliography file '{bib}' not found")  # Removed "Error:"
+            content = read_file_strip_comments(bib, remove_comments)
+            content = remove_commands(content, remove_list=remove_list, purge_list=purge_list)
+            bib_blocks += create_filecontents_block(bib, content)
+
+    # Add .bbl file inclusion if requested
+    bbl_block = ""
+    if include_bbl:
+        # Get input base name for .bbl file
+        input_base = os.path.splitext(os.path.basename(input_file))[0]
+        bbl_file = f"{input_base}.bbl"
+        
+        if not os.path.exists(bbl_file):
+            raise FileNotFoundError(
+                f"Required .bbl file '{bbl_file}' not found. "
+                f"Please compile with biber/bibtex first to generate it."
+            )
+            
+        # Read .bbl file WITHOUT removing comments (keep original False parameter)
+        content = read_file_strip_comments(bbl_file, remove_comments=False)  # Critical change
+        
+        # Use output filename base for the embedded .bbl
+        output_base = os.path.splitext(os.path.basename(output_file))[0]
+        embedded_bbl_name = f"{output_base}.bbl"
+        bbl_block = create_filecontents_block(embedded_bbl_name, content)
 
     sty_blocks = ""
     if include_sty:
@@ -190,12 +221,12 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
         for aux_base in extract_external_docs(main_content):
             aux_file = aux_base + ".aux"
             if not os.path.exists(aux_file):
-                raise FileNotFoundError(f"Error: Required external document file '{aux_file}' not found")
+                raise FileNotFoundError(f"Required external document file '{aux_file}' not found")
             content = read_file_strip_comments(aux_file, remove_comments)
             content = remove_commands(content, remove_list=remove_list, purge_list=purge_list)
             aux_blocks += create_filecontents_block(aux_file, content)
 
-    full_output = bib_blocks + sty_blocks + aux_blocks + main_content
+    full_output = bib_blocks + bbl_block + sty_blocks + aux_blocks + main_content
     with open(output_file, 'w', encoding='utf-8', newline='\n') as f:
         f.write(full_output)
 
@@ -210,9 +241,10 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--strip-comments", action="store_true", help="Remove comments and empty lines")
     parser.add_argument("-s", "--include-sty", action="store_true", help="Embed .sty files")
     parser.add_argument("-a", "--include-aux", action="store_true", help="Embed .aux files")
-    parser.add_argument("-r", "--remove", nargs='+', help="Commands to remove (e.g., 'hl' keeps content, removes only the command)")
-    parser.add_argument("-p", "--purge", nargs='+', help="Commands to completely purge (remove command and its argument block)")
-    parser.add_argument("-g", "--generate-pdf", action="store_true",help="Generate PDF after flattening (requires pdflatex)")
+    parser.add_argument("-b", "--include-bbl", action="store_true", help="Embed formatted .bbl bibliography")
+    parser.add_argument("-r", "--remove", nargs='+', help="Commands to remove")
+    parser.add_argument("-p", "--purge", nargs='+', help="Commands to completely purge")
+    parser.add_argument("-g", "--generate-pdf", action="store_true", help="Generate PDF after flattening")
 
     args = parser.parse_args()
 
@@ -223,6 +255,7 @@ if __name__ == "__main__":
             args.strip_comments,
             args.include_sty,
             args.include_aux,
+            args.include_bbl,
             args.remove,
             args.purge
         )
@@ -232,39 +265,40 @@ if __name__ == "__main__":
             base_name = os.path.splitext(args.output)[0]
     
             try:
-                # Check for biblatex
-                with open(args.output, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                    uses_biblatex = 'biblatex' in content
-        
-                # First pdflatex run (allow warnings)
-                subprocess.run(['pdflatex', '-interaction=nonstopmode', args.output],check=False)  # Don't fail on warnings
-        
-                # Bibliography processing
-                if uses_biblatex:
-                    bib_result = subprocess.run(['biber', base_name], capture_output=True, text=True)
-                    if bib_result.returncode != 0:
-                        print(f"Biber warning: {bib_result.stderr}")
+                # When -b is used, we already have the .bbl file included
+                if args.include_bbl:
+                    # Single pdflatex run is sufficient
+                    subprocess.run(['pdflatex', '-interaction=nonstopmode', args.output], check=False)
                 else:
-                    bib_result = subprocess.run(['bibtex', base_name], capture_output=True, text=True)
-                    if bib_result.returncode != 0:
-                        print(f"BibTeX warning: {bib_result.stderr}")
+                    # Normal compilation sequence
+                    with open(args.output, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        uses_biblatex = 'biblatex' in content
         
-                # Final runs (allow warnings)
-                subprocess.run(['pdflatex', '-interaction=nonstopmode', args.output], check=False)
-                subprocess.run(['pdflatex', '-interaction=nonstopmode', args.output], check=False)
+                    subprocess.run(['pdflatex', '-interaction=nonstopmode', args.output], check=False)
         
-                # Verify PDF was created
+                    if uses_biblatex:
+                        bib_result = subprocess.run(['biber', base_name], capture_output=True, text=True)
+                        if bib_result.returncode != 0:
+                            print(f"Biber warning: {bib_result.stderr}")
+                    else:
+                        bib_result = subprocess.run(['bibtex', base_name], capture_output=True, text=True)
+                        if bib_result.returncode != 0:
+                            print(f"BibTeX warning: {bib_result.stderr}")
+        
+                    subprocess.run(['pdflatex', '-interaction=nonstopmode', args.output], check=False)
+                    subprocess.run(['pdflatex', '-interaction=nonstopmode', args.output], check=False)
+        
                 if os.path.exists(f"{base_name}.pdf"):
                     print(f"\nPDF successfully generated: {base_name}.pdf")
                 else:
                     raise RuntimeError("PDF file was not created despite compilation attempts")
-            
+    
             except Exception as e:
                 print(f"\nWarning: PDF generation completed with minor issues: {str(e)}")
                 if os.path.exists(f"{base_name}.pdf"):
                     print("...but a PDF file was still generated (check for warnings)")
 
     except FileNotFoundError as e:
-        print(f"Error: {str(e)}")
+        print(str(e))
         exit(1)
