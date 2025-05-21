@@ -2,6 +2,19 @@ import os
 import re
 import argparse
 import subprocess
+import urllib.request
+import tempfile
+
+def download_biblatex_readbbl():
+    """Download the latest biblatex-readbbl.sty from CTAN"""
+    url = "https://mirrors.ctan.org/macros/latex/contrib/biblatex-contrib/biblatex-readbbl/biblatex-readbbl.sty"
+    try:
+        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+            with urllib.request.urlopen(url) as response:
+                tmp_file.write(response.read())
+            return tmp_file.name
+    except Exception as e:
+        raise RuntimeError(f"Failed to download biblatex-readbbl.sty: {str(e)}")
 
 def extract_bbl_file(tex):
     # Look for \bibliography or \addbibresource commands to guess the .bbl filename
@@ -158,7 +171,7 @@ def create_filecontents_block(filename, content):
 
 
 def submit_latex(input_file, output_file, remove_comments, include_sty, include_external,
-                 include_bbl, remove_list=None, purge_list=None):
+                 include_bbl, use_readbbl, remove_list=None, purge_list=None):
     seen = set()
     try:
         main_content = recursive_embed(
@@ -170,23 +183,43 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
             purge_list=purge_list
         )
     except FileNotFoundError as e:
-        print(str(e))  # Removed "Error:" prefix
+        print(str(e))
         exit(1)
 
+    # Download biblatex-readbbl.sty if -B is used
+    readbbl_block = ""
+    if use_readbbl:
+        try:
+            # Download latest version from CTAN
+            url = "https://mirrors.ctan.org/macros/latex/contrib/biblatex-contrib/biblatex-readbbl/latex/biblatex-readbbl.sty"
+            with urllib.request.urlopen(url) as response:
+                readbbl_content = response.read().decode('utf-8')
+            readbbl_block = create_filecontents_block("biblatex-readbbl.sty", readbbl_content)
+            
+            # Replace \addbibresource with biblatex-readbbl package
+            output_name = os.path.splitext(os.path.basename(output_file))[0]
+            main_content = re.sub(
+                r'\\addbibresource\{[^}]+\}',
+                r'\\usepackage[bblfile=' + output_name + r']{biblatex-readbbl}',
+                main_content
+            )
+        except Exception as e:
+            print(f"Warning: Could not download biblatex-readbbl.sty ({str(e)})")
+            use_readbbl = False
+
     bib_blocks = ""
-    # Only process .bib files if -b is NOT specified
-    if not include_bbl:
+    # Only process .bib files if neither -b nor -B is specified
+    if not (include_bbl or use_readbbl):
         for bib in extract_bibliographies(main_content):
             if not os.path.exists(bib):
-                raise FileNotFoundError(f"Required bibliography file '{bib}' not found")  # Removed "Error:"
+                raise FileNotFoundError(f"Required bibliography file '{bib}' not found")
             content = read_file_strip_comments(bib, remove_comments)
             content = remove_commands(content, remove_list=remove_list, purge_list=purge_list)
             bib_blocks += create_filecontents_block(bib, content)
 
-    # Add .bbl file inclusion if requested
+    # Handle .bbl file inclusion (for both -b and -B)
     bbl_block = ""
-    if include_bbl:
-        # Get input base name for .bbl file
+    if include_bbl or use_readbbl:
         input_base = os.path.splitext(os.path.basename(input_file))[0]
         bbl_file = f"{input_base}.bbl"
         
@@ -196,10 +229,7 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
                 f"Please compile with biber/bibtex first to generate it."
             )
             
-        # Read .bbl file WITHOUT removing comments (keep original False parameter)
-        content = read_file_strip_comments(bbl_file, remove_comments=False)  # Critical change
-        
-        # Use output filename base for the embedded .bbl
+        content = read_file_strip_comments(bbl_file, remove_comments=False)
         output_base = os.path.splitext(os.path.basename(output_file))[0]
         embedded_bbl_name = f"{output_base}.bbl"
         bbl_block = create_filecontents_block(embedded_bbl_name, content)
@@ -226,7 +256,7 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
             content = remove_commands(content, remove_list=remove_list, purge_list=purge_list)
             aux_blocks += create_filecontents_block(aux_file, content)
 
-    full_output = bib_blocks + bbl_block + sty_blocks + aux_blocks + main_content
+    full_output = readbbl_block + bib_blocks + bbl_block + sty_blocks + aux_blocks + main_content
     with open(output_file, 'w', encoding='utf-8', newline='\n') as f:
         f.write(full_output)
 
@@ -242,6 +272,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--include-sty", action="store_true", help="Embed .sty files")
     parser.add_argument("-a", "--include-aux", action="store_true", help="Embed .aux files")
     parser.add_argument("-b", "--include-bbl", action="store_true", help="Embed formatted .bbl bibliography")
+    parser.add_argument("-B", "--use-readbbl", action="store_true", help="Download and include latest biblatex-readbbl.sty and use it")
     parser.add_argument("-r", "--remove", nargs='+', help="Commands to remove")
     parser.add_argument("-p", "--purge", nargs='+', help="Commands to completely purge")
     parser.add_argument("-g", "--generate-pdf", action="store_true", help="Generate PDF after flattening")
@@ -256,6 +287,7 @@ if __name__ == "__main__":
             args.include_sty,
             args.include_aux,
             args.include_bbl,
+            args.use_readbbl,  # Added new argument
             args.remove,
             args.purge
         )
@@ -265,9 +297,9 @@ if __name__ == "__main__":
             base_name = os.path.splitext(args.output)[0]
     
             try:
-                # When -b is used, we already have the .bbl file included
-                if args.include_bbl:
-                    # Two pdflatex run is sufficient
+                # When -b or -B is used, we already have the .bbl file included
+                if args.include_bbl or args.use_readbbl:
+                    # Two pdflatex runs are sufficient
                     subprocess.run(['pdflatex', '-interaction=nonstopmode', args.output], check=False)
                     subprocess.run(['pdflatex', '-interaction=nonstopmode', args.output], check=False)
                 else:
