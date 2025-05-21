@@ -83,7 +83,7 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor -p 
 
    Note 3: Using the -b option includes the precompiled "main.bbl" file instead of relying on a ".bib" file for bibliography generation. This is particularly useful when the journal’s submission system supports only pdflatex run and does not execute `biber` or `bibtex`.
 
-   Note 4: The -B option also includes the `.bbl` file and uses the [`biblatex-readbbl`](https://ctan.org/pkg/biblatex-readbbl?lang=en) package. This is particularly useful for journals that do not support `biber`, as it allows you to bypass the need for a `.bib` file and use a precompiled `.bbl` instead.
+   Note 4: The -B option also includes the `.bbl` file and uses the [`biblatex-readbbl`](https://ctan.org/pkg/biblatex-readbbl?lang=en) package. This is particularly useful for journals that do not support `biber`, as it allows you to bypass the need for a `.bib` file and use a precompiled `.bbl` instead. We automatically download `biblatex-readbbl.sty`, embed it in the `.tex` file using the `filecontents` environment, and generate it during compilation. This allows the document to compile even if the journal or platform does not support installing additional LaTeX packages.
 
 5. **Compile the submission version** to check:
 
