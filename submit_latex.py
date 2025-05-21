@@ -119,6 +119,64 @@ def remove_command_instances(text, command, purge=True):
     return output
 
 
+def remove_environment_instances(text, env_name, purge=True):
+    """Remove all instances of an environment. If `purge` is False, keep the content inside the environment."""
+    begin_pattern = re.compile(r'\\begin\s*\{\s*' + re.escape(env_name) + r'\s*\}')
+    end_pattern = re.compile(r'\\end\s*\{\s*' + re.escape(env_name) + r'\s*\}')
+    
+    pos = 0
+    output = ''
+    
+    while True:
+        begin_match = begin_pattern.search(text, pos)
+        if not begin_match:
+            output += text[pos:]
+            break
+            
+        # Find matching \end{env_name}
+        end_search_pos = begin_match.end()
+        depth = 1
+        end_match = None
+        
+        while True:
+            next_begin = begin_pattern.search(text, end_search_pos)
+            next_end = end_pattern.search(text, end_search_pos)
+            
+            if not next_end:
+                # No matching end found, skip this begin
+                break
+                
+            if next_begin and next_begin.start() < next_end.start():
+                depth += 1
+                end_search_pos = next_begin.end()
+            else:
+                depth -= 1
+                end_search_pos = next_end.end()
+                if depth == 0:
+                    end_match = next_end
+                    break
+    
+        if not end_match:
+            # No matching end found, skip this begin
+            output += text[pos:begin_match.end()]
+            pos = begin_match.end()
+            continue
+            
+        if purge:
+            # Remove entire environment
+            output += text[pos:begin_match.start()]
+            pos = end_match.end()
+        else:
+            # Keep content, remove begin/end tags
+            output += text[pos:begin_match.end()]
+            content_start = begin_match.end()
+            content_end = end_match.start()
+            output += text[content_start:content_end]
+            pos = end_match.end()
+            
+    return output
+
+
 def remove_commands(tex, remove_list=None, purge_list=None):
     if remove_list:
         for cmd in remove_list:
@@ -133,20 +191,32 @@ def remove_commands(tex, remove_list=None, purge_list=None):
     return tex
 
 
-def recursive_embed(filename, seen_files, remove_comments, is_main_file=False, remove_list=None, purge_list=None):
+def remove_environments(tex, remove_envs=None, purge_envs=None):
+    if remove_envs:
+        for env in remove_envs:
+            tex = remove_environment_instances(tex, env, purge=False)
+
+    if purge_envs:
+        for env in purge_envs:
+            tex = remove_environment_instances(tex, env, purge=True)
+
+    return tex
+
+
+def recursive_embed(filename, seen_files, remove_comments, is_main_file=False, 
+                   remove_list=None, purge_list=None, remove_envs=None, purge_envs=None):
     if filename in seen_files:
         return ''
     seen_files.add(filename)
 
     if not os.path.exists(filename):
         raise FileNotFoundError(f"Required input file '{filename}' not found")
-        # Remove this line:
-        # return f"% Missing file: {filename}\n"
 
     base_dir = os.path.dirname(filename)
     tex = read_file_strip_comments(filename, remove_comments)
 
     tex = remove_commands(tex, remove_list=remove_list, purge_list=purge_list)
+    tex = remove_environments(tex, remove_envs=remove_envs, purge_envs=purge_envs)
 
     if not is_main_file:
         tex = re.sub(r'\\documentclass(?:\[[^\]]*\])?\{[^}]+\}', '', tex)
@@ -159,7 +229,8 @@ def recursive_embed(filename, seen_files, remove_comments, is_main_file=False, r
             sub_filename += '.tex'
         sub_path = os.path.join(base_dir, sub_filename)
         return recursive_embed(sub_path, seen_files, remove_comments, is_main_file=False,
-                               remove_list=remove_list, purge_list=purge_list)
+                             remove_list=remove_list, purge_list=purge_list,
+                             remove_envs=remove_envs, purge_envs=purge_envs)
 
     tex = re.sub(r'\\(?:input|subfile)\{([^}]+)\}', replacer, tex)
     return tex
@@ -171,7 +242,14 @@ def create_filecontents_block(filename, content):
 
 
 def submit_latex(input_file, output_file, remove_comments, include_sty, include_external,
-                 include_bbl, use_readbbl, remove_list=None, purge_list=None):
+                include_bbl, use_readbbl, remove_list=None, purge_list=None,
+                remove_envs=None, purge_envs=None):
+    # If remove_comments is True, add 'comment' to purge_envs
+    if remove_comments:
+        purge_envs = list(purge_envs) if purge_envs else []
+        if 'comment' not in purge_envs:
+            purge_envs.append('comment')
+    
     seen = set()
     try:
         main_content = recursive_embed(
@@ -180,7 +258,9 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
             remove_comments,
             is_main_file=True,
             remove_list=remove_list,
-            purge_list=purge_list
+            purge_list=purge_list,
+            remove_envs=remove_envs,
+            purge_envs=purge_envs
         )
     except FileNotFoundError as e:
         print(str(e))
@@ -215,6 +295,7 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
                 raise FileNotFoundError(f"Required bibliography file '{bib}' not found")
             content = read_file_strip_comments(bib, remove_comments)
             content = remove_commands(content, remove_list=remove_list, purge_list=purge_list)
+            content = remove_environments(content, remove_envs=remove_envs, purge_envs=purge_envs)
             bib_blocks += create_filecontents_block(bib, content)
 
     # Handle .bbl file inclusion (for both -b and -B)
@@ -244,6 +325,7 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
                 if os.path.exists(name):
                     content = read_file_strip_comments(name, remove_comments)
                     content = remove_commands(content, remove_list=remove_list, purge_list=purge_list)
+                    content = remove_environments(content, remove_envs=remove_envs, purge_envs=purge_envs)
                     sty_blocks += create_filecontents_block(name, content)
 
     aux_blocks = ""
@@ -254,6 +336,7 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
                 raise FileNotFoundError(f"Required external document file '{aux_file}' not found")
             content = read_file_strip_comments(aux_file, remove_comments)
             content = remove_commands(content, remove_list=remove_list, purge_list=purge_list)
+            content = remove_environments(content, remove_envs=remove_envs, purge_envs=purge_envs)
             aux_blocks += create_filecontents_block(aux_file, content)
 
     full_output = readbbl_block + bib_blocks + bbl_block + sty_blocks + aux_blocks + main_content
@@ -263,18 +346,20 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
     print(f"Successfully created flattened LaTeX file: {output_file}")
 
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Flatten LaTeX document with dependencies.")
     parser.add_argument("input", help="Main LaTeX input file")
     parser.add_argument("-o", "--output", default="flattened.tex", help="Output file")
-    parser.add_argument("-c", "--strip-comments", action="store_true", help="Remove comments and empty lines")
+    parser.add_argument("-c", "--strip-comments", action="store_true", 
+                       help="Remove comments and empty lines, and completely purge comment environments")
     parser.add_argument("-s", "--include-sty", action="store_true", help="Embed .sty files")
     parser.add_argument("-a", "--include-aux", action="store_true", help="Embed .aux files")
     parser.add_argument("-b", "--include-bbl", action="store_true", help="Embed formatted .bbl bibliography")
     parser.add_argument("-B", "--use-readbbl", action="store_true", help="Download and include latest biblatex-readbbl.sty and use it")
     parser.add_argument("-r", "--remove", nargs='+', help="Commands to remove")
     parser.add_argument("-p", "--purge", nargs='+', help="Commands to completely purge")
+    parser.add_argument("-R", "--remove-env", nargs='+', help="Environments to remove")
+    parser.add_argument("-P", "--purge-env", nargs='+', help="Environments to completely purge")
     parser.add_argument("-g", "--generate-pdf", action="store_true", help="Generate PDF after flattening")
 
     args = parser.parse_args()
@@ -287,9 +372,11 @@ if __name__ == "__main__":
             args.include_sty,
             args.include_aux,
             args.include_bbl,
-            args.use_readbbl,  # Added new argument
+            args.use_readbbl,
             args.remove,
-            args.purge
+            args.purge,
+            args.remove_env,
+            args.purge_env
         )
 
         if args.generate_pdf:
