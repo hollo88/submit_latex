@@ -36,7 +36,7 @@ python submit_latex.py main.tex -o submission.tex
 ### 🔍 Full example with all options
 
 ```bash
-python submit_latex.py main.tex -o submission.tex -c -s -a -r \hl \textcolor -p \sout
+python submit_latex.py main.tex -o submission.tex -c -s -a -r -B \hl \textcolor -p \sout -g
 ```
 
 ---
