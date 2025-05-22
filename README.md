@@ -35,6 +35,8 @@ cd submit_latex
 
 ## 🚀 Usage
 
+Just complie your document and run the script:
+
 ### 🔧 Basic command
 
 ```bash
@@ -74,10 +76,10 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -B -r \hl \textcolor 
     ```bash
     pdflatex main.tex
     bibtex main.aux
-    pdflatex main.tex
+    pdflatex main.texlatexmk
     pdflatex main.tex
     ```
-    Note 1: If you are using biber instead of bibtex, use the command "biber main".
+    Note 1: If you are using biber instead of bibtex, use the command "biber main". (You can also use latexmk.)
    
     Note 2: You can also download your Overleaf project, but you’ll need to download the `.aux` file (e.g., supplementary.aux) if you have cross-references or the `.bbl` file (e.g., main.bbl, with the -b and -B options) — Overleaf → “Logs and output files” → “Other logs and files” (at the bottom of the page).
 
