@@ -1,0 +1,407 @@
+\begin{filecontents*}[overwrite]{biblatex-readbbl.sty}
+%% $Id: biblatex-readbbl.sty 401 2022-01-09 14:16:40Z herbert $
+%%
+%% This is file `biblatex-readbbl.sty',
+%%
+%% IMPORTANT NOTICE:
+%%
+%% (C) Herbert Voss <hvoss _at_ tug.org>, 2020
+%%
+%% This program can be redistributed and/or modified under the terms
+%% of the LaTeX Project Public License Distributed from CTAN archives
+%% in directory macros/latex/base/lppl.txt.
+%%
+%% DESCRIPTION:
+%%   `biblatex-readbbl' is a package for reading a bbl file created by biber
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{biblatex-readbbl}[2022/01/09 v 0.01 read bbl file]
+\RequirePackage{xkeyval}
+
+\def\bbl@read@file{}
+\DeclareOptionX{bblfile}{\def\bbl@read@file{#1}}
+\ProcessOptionsX\relax
+%
+\begingroup
+%% Convert \verb sections like:
+%      \verb{urlraw}
+%      \verb http://mirror.ctan.org/info/bibtex/tamethebeast/ttb_en.pdf
+%      \endverb
+%      \verb{url}
+%      \verb http://mirror.ctan.org/info/bibtex/tamethebeast/ttb_en.pdf
+%      \endverb
+%%
+%%   into 
+%
+%      \field{urlraw}{http://mirror.ctan.org/info/bibtex/tamethebeast/ttb_en.pdf}
+%      \field{url}{http://mirror.ctan.org/info/bibtex/tamethebeast/ttb_en.pdf}
+%
+%\def\verb#1 \noexpand#2 #3\endverb{\field{#1}{#3}}
+%
+
+\expandafter\ifx\expandafter\relax\bbl@read@file\relax  
+  \gdef\bbl@read@file{\jobname}% 
+\fi
+
+%\typeout{>>>>> Read bbl file: \bbl@read@file}
+
+\gdef\blx@bblfile{%
+  \blx@secinit
+  \begingroup
+  \blx@bblstart
+%%%%  Start erzeugte Datei \jobname.bbl %%%%
+%
+\IfFileExists{\bbl@read@file.bbl}{\input{\bbl@read@file.bbl}}{\typeout{!!File \bbl@read@file.bbl does not exist!!!}}
+%
+%%%%  Ende erzeugte Datei \jobname.bbl %%%%
+  \global\toggletrue{blx@bbldone}%
+  \blx@generate@bbl@mdfivesum@found{\jobname.bbl}
+  \blx@bblend
+  \endgroup
+  % Check if Biber rerun was not carried out.
+  % If so, ask for it again.
+%  \blx@check@bbl@rerun@mdfivesum
+  % global sorting as this is called at BeginDocument
+  \csnumgdef{blx@labelnumber@\the\c@refsection}{0}%
+}
+
+\endgroup
+
+\end{filecontents*}
+
+\begin{filecontents*}[overwrite]{submission.bbl}
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.2 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{nty/global//global/global}
+    \entry{example2023}{article}{}
+      \name{author}{2}{}{%
+        {{hash=1318a946c3fffa54cec1130748f21c17}{%
+           family={Author},
+           familyi={A\bibinitperiod},
+           given={A.},
+           giveni={A\bibinitperiod}}}%
+        {{hash=71822002eb7e091364e93d3c3d99f061}{%
+           family={Writer},
+           familyi={W\bibinitperiod},
+           given={B.},
+           giveni={B\bibinitperiod}}}%
+      }
+      \strng{namehash}{370f0cc94f6c38da59a9ab3474daf79a}
+      \strng{fullhash}{370f0cc94f6c38da59a9ab3474daf79a}
+      \strng{bibnamehash}{370f0cc94f6c38da59a9ab3474daf79a}
+      \strng{authorbibnamehash}{370f0cc94f6c38da59a9ab3474daf79a}
+      \strng{authornamehash}{370f0cc94f6c38da59a9ab3474daf79a}
+      \strng{authorfullhash}{370f0cc94f6c38da59a9ab3474daf79a}
+      \field{sortinit}{A}
+      \field{sortinithash}{2f401846e2029bad6b3ecc16d50031e2}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Journal of Examples}
+      \field{title}{Example Article}
+      \field{volume}{1}
+      \field{year}{2023}
+      \field{pages}{1\bibrangedash 10}
+      \range{pages}{10}
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+
+\end{filecontents*}
+
+\begin{filecontents*}[overwrite]{mcode.sty}
+
+
+\def\fileversion{2.7}
+\def\filedate{2015/11/11}
+
+\typeout{-- Package: `mcode' \fileversion\space <\filedate> --}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{mcode}[\filedate\space\fileversion]
+
+\newif\ifmcode@bw
+\DeclareOption{bw}{\mcode@bwtrue}
+
+\newif\ifmcode@numbered
+\DeclareOption{numbered}{\mcode@numberedtrue}
+
+\newif\ifmcode@final
+\DeclareOption{final}{\mcode@finaltrue}
+
+\newif\ifmcode@autolinebreaks
+\DeclareOption{autolinebreaks}{\mcode@autolinebreakstrue}
+
+\newif\ifmcode@useliterate
+\DeclareOption{useliterate}{\mcode@useliteratetrue}
+
+\newif\ifmcode@framed
+\DeclareOption{framed}{\mcode@framedtrue}
+
+\DeclareOption*{
+  \PackageWarning{mcode}{Unknown option `\CurrentOption' !}
+}
+\ProcessOptions
+
+\ifmcode@bw\typeout{ - settings optimized for printing (bw formating)}
+\else\typeout{ - settings optimized for display (colour formating)}\fi
+\ifmcode@numbered\typeout{ - line numbering enabled}\else\fi
+\ifmcode@useliterate\typeout{ - literate programming (character replacements) enabled}\else\fi
+\ifmcode@autolinebreaks\typeout{ - automatic line breaking enabled (careful, buggy!)}\else\fi
+\ifmcode@framed\typeout{ - framed listings}\else\fi
+
+\newcommand{\mcode}[1]{\lstinline[basicstyle=\lstbasicfont\small]|#1|}
+
+\newcommand{\mcodefn}[1]{\lstinline[basicstyle=\lstbasicfont\footnotesize]|#1|}
+
+\ifx\color\undefined
+  \RequirePackage{xcolor}
+\fi
+
+\ifx\lstset\undefined
+  \ifmcode@final
+    \RequirePackage[final]{listings}
+  \else
+    \RequirePackage{listings}
+  \fi
+\fi
+
+\ifx\textquotesingle\undefined
+  \RequirePackage{textcomp}
+\fi
+
+
+\def\lstbasicfont{\fontfamily{pcr}\selectfont\footnotesize}
+
+\lstdefinelanguage{matlabfloz}{
+  alsoletter={...},
+  morekeywords={
+  break,case,catch,classdef,continue,else,
+  elseif,end,for,function,global,if,
+  otherwise,parfor,persistent,
+  return,spmd,switch,try,while,...},
+  comment=[l]\%,
+  morecomment=[l]...,
+  morecomment=[s]{\%\{}{\%\}},
+  morestring=[m]'
+}[keywords,comments,strings]
+
+\lstset{
+  basicstyle={\lstbasicfont},
+  showstringspaces=false,
+  tabsize=4,
+  mathescape=false,escapechar=§,
+  upquote=true,
+  aboveskip={1.5\baselineskip},
+  columns=fixed
+}
+
+\ifmcode@bw
+ \def\mcommentfont{\color[gray]{.75}\itshape}
+  \lstset{language=matlabfloz,
+    keywordstyle=\bfseries,
+    commentstyle=\mcommentfont,
+    stringstyle=\color[gray]{0.5}
+  }
+\else
+ \def\mcommentfont{\color[rgb]{.133,.545,.133}}
+  \lstset{language=matlabfloz,
+    keywordstyle=\color[rgb]{0,0,1},
+    commentstyle=\mcommentfont,
+    stringstyle=\color[rgb]{.627,.126,.941}
+  }
+\fi
+
+\ifmcode@autolinebreaks
+ \newsavebox{\lbreakdots}\sbox{\lbreakdots}{\lstbasicfont\mcommentfont...}
+ \lstset{breaklines=true,breakatwhitespace=true,prebreak=\usebox{\lbreakdots}}
+\fi
+
+\ifmcode@useliterate
+ \lstset{
+  literate=
+   {~}{{$\neg$}}1
+   {<=}{{\tiny$\leq$}}1
+   {>=}{{\tiny$\geq$}}1
+   {~=}{{\tiny$\neq$}}1
+   {delta}{{\tiny$\Delta$}}1
+   {µ}{{$\mu$}}1
+   {(end)}{\lstbasicfont (end)}{5}
+   {({ }end)}{\lstbasicfont ({ }end)}{6}
+   {(end{ })}{\lstbasicfont (end{ })}{6}
+   {({ }end{ })}{\lstbasicfont ({ }end{ })}{7}
+   {:end}{\lstbasicfont :end}{4}
+   {:{ }end}{\lstbasicfont :{ }end}{5}
+   {end:}{\lstbasicfont end:}{4}
+   {end{ }:}{\lstbasicfont end{ }:}{5}
+   {,end}{\lstbasicfont ,end}{4}
+   {,{ }end}{\lstbasicfont ,{ }end}{5}
+ }
+\else
+ \lstset{
+  literate=
+   {(end)}{\lstbasicfont (end)}{5}
+   {({ }end)}{\lstbasicfont ({ }end)}{6}
+   {(end{ })}{\lstbasicfont (end{ })}{6}
+   {({ }end{ })}{\lstbasicfont ({ }end{ })}{7}
+   {:end}{\lstbasicfont :end}{4}
+   {:{ }end}{\lstbasicfont :{ }end}{5}
+   {end:}{\lstbasicfont end:}{4}
+   {end{ }:}{\lstbasicfont end{ }:}{5}
+   {,end}{\lstbasicfont ,end}{4}
+   {,{ }end}{\lstbasicfont ,{ }end}{5}
+   {µ}{$\mu$}1
+   {~}{{\fontfamily{ptm}\selectfont\texttildelow}}1
+ }
+\fi
+
+\ifmcode@numbered
+  \lstset{
+    numbersep=3mm, numbers=left, numberstyle=\tiny,
+  }
+\fi
+
+\ifmcode@framed
+  \lstset{
+    frame=single,rulecolor=\color{black}
+  }
+  \ifmcode@numbered
+    \lstset{
+      framexleftmargin=6mm, xleftmargin=6mm
+    }
+  \fi
+\fi
+
+\makeatletter
+\lst@CCPutMacro\lst@ProcessOther {"2D}{\lst@ttfamily{-{}}{-{}}}
+\@empty\z@\@empty
+\makeatother
+
+\endinput
+
+\end{filecontents*}
+
+\begin{filecontents*}[overwrite]{file2.aux}
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyperFirstAtBeginDocument{\AtBeginDocument}
+\HyperFirstAtBeginDocument{\ifx\hyper@anchor\@undefined
+\global\let\oldcontentsline\contentsline
+\gdef\contentsline#1#2#3#4{\oldcontentsline{#1}{#2}{#3}}
+\global\let\oldnewlabel\newlabel
+\gdef\newlabel#1#2{\newlabelxx{#1}#2}
+\gdef\newlabelxx#1#2#3#4#5#6{\oldnewlabel{#1}{{#2}{#3}}}
+\AtEndDocument{\ifx\hyper@anchor\@undefined
+\let\contentsline\oldcontentsline
+\let\newlabel\oldnewlabel
+\fi}
+\fi}
+\global\let\hyper@last\relax 
+\gdef\HyperFirstAtBeginDocument#1{#1}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Label1}{1}{section.1}\protected@file@percent }
+\newlabel{label1}{{1}{1}{Label1}{section.1}{}}
+\gdef \@abspage@la
+
+\end{filecontents*}
+
+\documentclass{article}
+
+\usepackage{xcolor}        
+\usepackage{soul}          
+\usepackage{comment}       
+\usepackage{xr}            
+\usepackage{subfiles}      
+\usepackage[backend=biber,style=numeric]{biblatex} 
+\usepackage[framed,numbered,autolinebreaks,useliterate]{mcode} 
+\usepackage{courier}
+
+
+\usepackage[bblfile=submission]{biblatex-readbbl}
+
+\makeatletter
+\newcommand*{\addFileDependency}[1]{
+  \typeout{(#1)}
+  \@addtofileli
+  \IfFileExists{#1}{}{\typeout{No file #1.}}
+}
+\makeatother
+
+\newcommand*{\myexternaldocument}[1]{
+  \externaldocument{#1}
+  \addFileDependency{#1.tex}
+  \addFileDependency{#1.aux}
+}
+
+\myexternaldocument{file2}
+
+\usepackage{xr-hyper}
+\usepackage{hyperref}
+
+
+\begin{document}
+
+\section{Main Document}
+This document demonstrates features supported by the ``submit\_latex" script.
+
+\subsection{Cross-Document Reference}
+Label \texttt{label1} is referenced from \texttt{file2} on page~\pageref{label1}.
+
+\subsection{Inclusion Examples}
+\paragraph{Using \texttt{\textbackslash input}:}
+\paragraph{Included Content}
+This content was included using the \textbackslash input command. It's processed as if it were typed directly in the main file.
+
+\paragraph{Using \texttt{\textbackslash subfile}:}
+
+
+
+\paragraph{Subfile Content}
+This content was included using the \textbackslash subfile command. The advantage is that each subfile can be compiled independently.
+
+
+\subsection{Text Formatting Examples}
+\begin{itemize}
+\item This text was red in the original file.
+\item This text was highlighted in the original file.
+\item Text can also be \textbf{bold}, \textit{italic}, or \underline{underlined}.
+\item We want to delete the following: 
+\end{itemize}
+
+We want to purge the enumerate environment:
+
+
+
+We want to remove the environment which centers this text.
+
+
+\subsection{Comment Examples}
+
+
+\subsection{Local Style File}
+Demonstration of the \mcode{MATLAB} style from a custom .sty file.
+
+\subsection{Bibliography}
+Here is an example citation~\cite{example2023}.
+
+\printbibliography
+
+\end{document}

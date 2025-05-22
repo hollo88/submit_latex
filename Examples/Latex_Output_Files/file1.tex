@@ -1,0 +1,87 @@
+% file1.tex - Main document demonstrating submit_latex features
+\documentclass{article}
+
+% Packages for formatting and features
+\usepackage{xcolor}        % Colored text
+\usepackage{soul}          % Highlighting with \hl{}
+\usepackage{comment}       % Multiline comments
+\usepackage{xr}            % Cross-referencing other documents
+\usepackage{subfiles}      % Allows \subfile for modular documents
+\usepackage[backend=biber,style=numeric]{biblatex} % Bibliography with biber
+\usepackage[framed,numbered,autolinebreaks,useliterate]{mcode} % MATLAB code formatting
+\usepackage{courier}
+
+
+% Load bibliography file
+\addbibresource{references.bib}
+
+% Cross-document referencing helper
+\makeatletter
+\newcommand*{\addFileDependency}[1]{%
+  \typeout{(#1)}%
+  \@addtofilelist{#1}%
+  \IfFileExists{#1}{}{\typeout{No file #1.}}%
+}
+\makeatother
+
+\newcommand*{\myexternaldocument}[1]{%
+  \externaldocument{#1}%
+  \addFileDependency{#1.tex}%
+  \addFileDependency{#1.aux}%
+}
+
+\myexternaldocument{file2}
+
+\usepackage{xr-hyper}
+\usepackage{hyperref}
+
+
+\begin{document}
+
+\section{Main Document}
+This document demonstrates features supported by the ``submit\_latex" script.
+
+\subsection{Cross-Document Reference}
+Label \texttt{label1} is referenced from \texttt{file2} on page~\pageref{label1}.
+
+\subsection{Inclusion Examples}
+\paragraph{Using \texttt{\textbackslash input}:}
+\input{included_content.tex}
+
+\paragraph{Using \texttt{\textbackslash subfile}:}
+\subfile{subfile_content}
+
+\subsection{Text Formatting Examples}
+\begin{itemize}
+\item \textcolor{red}{This text was red in the original file.}
+\item \hl{This text was highlighted in the original file.}
+\item Text can also be \textbf{bold}, \textit{italic}, or \underline{underlined}.
+\item We want to delete the following: \st{Text to delete.}
+\end{itemize}
+
+We want to purge the enumerate environment:
+\begin{enumerate}
+\item purge
+\item these lines
+\end{enumerate}
+
+\begin{center}
+We want to remove the environment which centers this text.
+\end{center}
+
+\subsection{Comment Examples}
+% This is a single-line comment using %
+\begin{comment}
+This entire block is a comment and will not appear in the compiled PDF.
+It demonstrates usage of the comment environment.
+\end{comment}
+
+\subsection{Local Style File}
+Demonstration of the \mcode{MATLAB} style from a custom .sty file.
+
+\subsection{Bibliography}
+Here is an example citation~\cite{example2023}.
+
+\printbibliography
+
+\end{document}

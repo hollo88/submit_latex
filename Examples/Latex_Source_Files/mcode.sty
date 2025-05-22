@@ -1,0 +1,168 @@
+
+
+\def\fileversion{2.7}
+\def\filedate{2015/11/11}
+
+\typeout{-- Package: `mcode' \fileversion\space <\filedate> --}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{mcode}[\filedate\space\fileversion]
+
+\newif\ifmcode@bw
+\DeclareOption{bw}{\mcode@bwtrue}
+
+\newif\ifmcode@numbered
+\DeclareOption{numbered}{\mcode@numberedtrue}
+
+\newif\ifmcode@final
+\DeclareOption{final}{\mcode@finaltrue}
+
+\newif\ifmcode@autolinebreaks
+\DeclareOption{autolinebreaks}{\mcode@autolinebreakstrue}
+
+\newif\ifmcode@useliterate
+\DeclareOption{useliterate}{\mcode@useliteratetrue}
+
+\newif\ifmcode@framed
+\DeclareOption{framed}{\mcode@framedtrue}
+
+\DeclareOption*{
+  \PackageWarning{mcode}{Unknown option `\CurrentOption' !}
+}
+\ProcessOptions
+
+\ifmcode@bw\typeout{ - settings optimized for printing (bw formating)}
+\else\typeout{ - settings optimized for display (colour formating)}\fi
+\ifmcode@numbered\typeout{ - line numbering enabled}\else\fi
+\ifmcode@useliterate\typeout{ - literate programming (character replacements) enabled}\else\fi
+\ifmcode@autolinebreaks\typeout{ - automatic line breaking enabled (careful, buggy!)}\else\fi
+\ifmcode@framed\typeout{ - framed listings}\else\fi
+
+\newcommand{\mcode}[1]{\lstinline[basicstyle=\lstbasicfont\small]|#1|}
+
+\newcommand{\mcodefn}[1]{\lstinline[basicstyle=\lstbasicfont\footnotesize]|#1|}
+
+\ifx\color\undefined
+  \RequirePackage{xcolor}
+\fi
+
+\ifx\lstset\undefined
+  \ifmcode@final
+    \RequirePackage[final]{listings}
+  \else
+    \RequirePackage{listings}
+  \fi
+\fi
+
+\ifx\textquotesingle\undefined
+  \RequirePackage{textcomp}
+\fi
+
+
+\def\lstbasicfont{\fontfamily{pcr}\selectfont\footnotesize}
+
+\lstdefinelanguage{matlabfloz}{
+  alsoletter={...},
+  morekeywords={
+  break,case,catch,classdef,continue,else,
+  elseif,end,for,function,global,if,
+  otherwise,parfor,persistent,
+  return,spmd,switch,try,while,...},
+  comment=[l]\%,
+  morecomment=[l]...,
+  morecomment=[s]{\%\{}{\%\}},
+  morestring=[m]'
+}[keywords,comments,strings]
+
+\lstset{
+  basicstyle={\lstbasicfont},
+  showstringspaces=false,
+  tabsize=4,
+  mathescape=false,escapechar=§,
+  upquote=true,
+  aboveskip={1.5\baselineskip},
+  columns=fixed
+}
+
+\ifmcode@bw
+ \def\mcommentfont{\color[gray]{.75}\itshape}
+  \lstset{language=matlabfloz,
+    keywordstyle=\bfseries,
+    commentstyle=\mcommentfont,
+    stringstyle=\color[gray]{0.5}
+  }
+\else
+ \def\mcommentfont{\color[rgb]{.133,.545,.133}}
+  \lstset{language=matlabfloz,
+    keywordstyle=\color[rgb]{0,0,1},
+    commentstyle=\mcommentfont,
+    stringstyle=\color[rgb]{.627,.126,.941}
+  }
+\fi
+
+\ifmcode@autolinebreaks
+ \newsavebox{\lbreakdots}\sbox{\lbreakdots}{\lstbasicfont\mcommentfont...}
+ \lstset{breaklines=true,breakatwhitespace=true,prebreak=\usebox{\lbreakdots}}
+\fi
+
+\ifmcode@useliterate
+ \lstset{
+  literate=
+   {~}{{$\neg$}}1
+   {<=}{{\tiny$\leq$}}1
+   {>=}{{\tiny$\geq$}}1
+   {~=}{{\tiny$\neq$}}1
+   {delta}{{\tiny$\Delta$}}1
+   {µ}{{$\mu$}}1
+   {(end)}{\lstbasicfont (end)}{5}
+   {({ }end)}{\lstbasicfont ({ }end)}{6}
+   {(end{ })}{\lstbasicfont (end{ })}{6}
+   {({ }end{ })}{\lstbasicfont ({ }end{ })}{7}
+   {:end}{\lstbasicfont :end}{4}
+   {:{ }end}{\lstbasicfont :{ }end}{5}
+   {end:}{\lstbasicfont end:}{4}
+   {end{ }:}{\lstbasicfont end{ }:}{5}
+   {,end}{\lstbasicfont ,end}{4}
+   {,{ }end}{\lstbasicfont ,{ }end}{5}
+ }
+\else
+ \lstset{
+  literate=
+   {(end)}{\lstbasicfont (end)}{5}
+   {({ }end)}{\lstbasicfont ({ }end)}{6}
+   {(end{ })}{\lstbasicfont (end{ })}{6}
+   {({ }end{ })}{\lstbasicfont ({ }end{ })}{7}
+   {:end}{\lstbasicfont :end}{4}
+   {:{ }end}{\lstbasicfont :{ }end}{5}
+   {end:}{\lstbasicfont end:}{4}
+   {end{ }:}{\lstbasicfont end{ }:}{5}
+   {,end}{\lstbasicfont ,end}{4}
+   {,{ }end}{\lstbasicfont ,{ }end}{5}
+   {µ}{$\mu$}1
+   {~}{{\fontfamily{ptm}\selectfont\texttildelow}}1
+ }
+\fi
+
+\ifmcode@numbered
+  \lstset{
+    numbersep=3mm, numbers=left, numberstyle=\tiny,
+  }
+\fi
+
+\ifmcode@framed
+  \lstset{
+    frame=single,rulecolor=\color{black}
+  }
+  \ifmcode@numbered
+    \lstset{
+      framexleftmargin=6mm, xleftmargin=6mm
+    }
+  \fi
+\fi
+
+\makeatletter
+\lst@CCPutMacro\lst@ProcessOther {"2D}{\lst@ttfamily{-{}}{-{}}}
+\@empty\z@\@empty
+\makeatother
+
+\endinput
+
