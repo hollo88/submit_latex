@@ -167,12 +167,10 @@ def remove_environment_instances(text, env_name, purge=True):
             output += text[pos:begin_match.start()]
             pos = end_match.end()
         else:
-            # Keep content, remove begin/end tags
-            output += text[pos:begin_match.end()]
-            content_start = begin_match.end()
-            content_end = end_match.start()
-            output += text[content_start:content_end]
-            pos = end_match.end()
+            # Remove BOTH begin AND end tags, keep content
+            output += text[pos:begin_match.start()]  # Keep text before begin
+            output += text[begin_match.end():end_match.start()]  # Keep content
+            pos = end_match.end()  # Skip end tag
             
     return output
 
