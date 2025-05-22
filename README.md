@@ -4,6 +4,12 @@ This Python script helps flatten a LaTeX project into a single `.tex` file, suit
 
 ---
 
+## 🎯 Why?
+
+Because sometimes journals just want *one single file*. And if your project looks like a spaghetti bowl of `\input`, `\subfile`, `\addbibresource`, and `\usepackage`, this tool will untangle it for you!
+
+---
+
 ## ✅ Features
 
 - Recursively processes `\input{}` and `\subfile{}` commands to inline external content
@@ -102,6 +108,17 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -B -r \hl \textcolor 
     Note 2: If you're using Overleaf, you can upload "submission.tex" to your project and compile it directly.
 
     Note3: If the -b and -B option is used, compiling with two `pdflatex submission.tex` is sufficient. Do not run `bibtex` or `biber`, as the bibliography is already included via the `.bbl` file.
+
+---
+
+📂 Example Files Folder Overview
+
+    Latex_Source_Files/ – Contains example project using cross-references, .bib, and commands to clean
+
+    Latex_Output_Files/ – The output files after compilation
+
+    Submission/ – The final submission.tex and submission.pdf ready to upload
+
 ---
 
 ## ⚠️ Important Notes
@@ -111,6 +128,13 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -B -r \hl \textcolor 
 - 📂 `.bbl` files are required for bibliography with the -b and -B options.
 - 🛠️ If you have `.bbl` file included, **do not change the name** of the file.
 - 🚫 This script **does not support** `\includeonly`.
+
+---
+
+🙏 Pay With a Citation
+
+If this script saves your sanity, please "pay" with a citation from one of my less cited works — I need those sweet academic karma points to survive. 😅
+[Google Scholar](https://scholar.google.com/citations?user=Vk3q974AAAAJ&hl=hu)
 
 ---
 
