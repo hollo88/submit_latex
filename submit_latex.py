@@ -86,36 +86,41 @@ def find_balanced_braces(text, start):
         i += 1
     return start, i  # inclusive start, exclusive end
 
-def remove_command_instances(text, command, purge=True):
-    """Remove all instances of a command starting with \command. Does not match inside other macro names."""
-    # Match only a backslash immediately followed by command name
-    pattern = re.compile(r'\\' + re.escape(command) + r'\s*(?=\{)')
+def remove_command_instances_safe(tex, command, purge=False):
+    """
+    Remove all instances of a command, but safely handle nested braces
+    to prevent empty lines inside outer arguments.
+    """
+    pattern = re.compile(r'\\' + re.escape(command.lstrip('\\')) + r'\s*\{')
     pos = 0
     output = ''
 
     while True:
-        match = pattern.search(text, pos)
+        match = pattern.search(tex, pos)
         if not match:
-            output += text[pos:]
+            output += tex[pos:]
             break
 
-        output += text[pos:match.start()]
-        brace_start = match.end()
-        if brace_start >= len(text) or text[brace_start] != '{':
-            pos = match.end()
-            continue
-
+        output += tex[pos:match.start()]
+        brace_start = match.end() - 1
         try:
-            start, end = find_balanced_braces(text, brace_start)
+            start, end = find_balanced_braces(tex, brace_start)
+            content = tex[start+1:end-1]
             if purge:
-                pos = end  # Remove command and content
+                # remove command and content completely
+                replacement = ''
             else:
-                output += text[start + 1:end - 1]  # Keep content only
-                pos = end
+                # keep content, remove command
+                # strip leading/trailing newlines to avoid empty lines
+                replacement = content.lstrip('\n').rstrip('\n')
+            output += replacement
+            pos = end
         except AssertionError:
-            pos = brace_start + 1
-
+            # fallback: copy as is
+            output += tex[match.start():match.end()]
+            pos = match.end()
     return output
+
 
 
 
@@ -178,14 +183,10 @@ def remove_environment_instances(text, env_name, purge=True):
 def remove_commands(tex, remove_list=None, purge_list=None):
     if remove_list:
         for cmd in remove_list:
-            cmd = cmd.lstrip('\\')
-            tex = remove_command_instances(tex, cmd, purge=False)
-
+            tex = remove_command_instances_safe(tex, cmd, purge=False)
     if purge_list:
         for cmd in purge_list:
-            cmd = cmd.lstrip('\\')
-            tex = remove_command_instances(tex, cmd, purge=True)
-
+            tex = remove_command_instances_safe(tex, cmd, purge=True)
     return tex
 
 
