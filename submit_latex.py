@@ -87,8 +87,9 @@ def find_balanced_braces(text, start):
     return start, i  # inclusive start, exclusive end
 
 def remove_command_instances(text, command, purge=True):
-    """Remove all instances of a command. If `purge` is False, keep the content inside the braces."""
-    pattern = re.compile(r'(\\?)' + re.escape(command) + r'\s*(?=\{)')
+    """Remove all instances of a command starting with \command. Does not match inside other macro names."""
+    # Match only a backslash immediately followed by command name
+    pattern = re.compile(r'\\' + re.escape(command) + r'\s*(?=\{)')
     pos = 0
     output = ''
 
@@ -107,16 +108,15 @@ def remove_command_instances(text, command, purge=True):
         try:
             start, end = find_balanced_braces(text, brace_start)
             if purge:
-                # Remove command and content
-                pos = end
+                pos = end  # Remove command and content
             else:
-                # Keep content, remove command only
-                output += text[start + 1:end - 1]
+                output += text[start + 1:end - 1]  # Keep content only
                 pos = end
         except AssertionError:
             pos = brace_start + 1
 
     return output
+
 
 
 def remove_environment_instances(text, env_name, purge=True):
