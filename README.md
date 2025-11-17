@@ -67,6 +67,13 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -B -r \hl \textcolor 
 | `-P ENV ...` | Remove specified LaTeX environments (delete their content)     |
 | `-g`	       | Generate PDF after flattening (requires pdflatex/biber)    |
 
+ **Note:**  
+> When using the `-b` or `-B` options, the script still embeds the original `.bib` files.  
+> Although these files are not required for compilation when a `.bbl` file is included, many journals
+> explicitly request the `.bib` sources as part of the submission. For this reason, they are always
+> included by default.
+
+
 ---
 
 ## 🔁 Workflow Example
@@ -79,7 +86,7 @@ python submit_latex.py main.tex -o submission.tex -c -s -a -B -r \hl \textcolor 
     pdflatex main.texlatexmk
     pdflatex main.tex
     ```
-    Note 1: If you are using biber instead of bibtex, use the command "biber main". (You can also use latexmk.)
+    Note 1: If you are using `biber` instead of `bibtex`, compile your bibliography with `biber main` (or use `latexmk`, which handles this automatically). Make sure to use the same `biber` version consistently—mixing versions can cause subtle incompatibilities. For example, Overleaf may use a different `biber` version than your local machine. To avoid issues, generate all bibliography-related files on the same system whenever possible.
    
     Note 2: You can also download your Overleaf project, but you’ll need to download the `.aux` file (e.g., supplementary.aux) if you have cross-references or the `.bbl` file (e.g., main.bbl, with the -b and -B options) — Overleaf → “Logs and output files” → “Other logs and files” (at the bottom of the page).
 
