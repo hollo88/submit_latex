@@ -239,6 +239,19 @@ def create_filecontents_block(filename, content):
     return ("\\begin{filecontents*}[overwrite]{" + filename + "}\n" +
             content.rstrip() + "\n\n\\end{filecontents*}\n\n")
 
+def find_file_in_folders(filename, folders):
+    """
+    Look for filename in the given list of folders.
+    Returns the full path to the first found file, or None if not found.
+    """
+    for folder in folders:
+        path = os.path.join(folder, filename)
+        if os.path.exists(path):
+            return path
+    if os.path.exists(filename):
+        return filename
+    return None
+
 
 def submit_latex(input_file, output_file, remove_comments, include_sty, include_external,
                 include_bbl, use_readbbl, remove_list=None, purge_list=None,
@@ -302,17 +315,18 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
     if include_bbl or use_readbbl:
         input_base = os.path.splitext(os.path.basename(input_file))[0]
         bbl_file = f"{input_base}.bbl"
-        
-        if not os.path.exists(bbl_file):
+
+        found_bbl = find_file_in_folders(bbl_file, ["output-subdoc"])
+        if not found_bbl:
             raise FileNotFoundError(
-                f"Required .bbl file '{bbl_file}' not found. "
+                f"Required .bbl file '{bbl_file}' not found in main folder or 'output-subdoc' subfolder. "
                 f"Please compile with biber/bibtex first to generate it."
             )
-            
-        content = read_file_strip_comments(bbl_file, remove_comments=False)
+        content = read_file_strip_comments(found_bbl, remove_comments=False)
         output_base = os.path.splitext(os.path.basename(output_file))[0]
         embedded_bbl_name = f"{output_base}.bbl"
         bbl_block = create_filecontents_block(embedded_bbl_name, content)
+
 
     sty_blocks = ""
     if include_sty:
@@ -327,13 +341,15 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
                     content = remove_environments(content, remove_envs=remove_envs, purge_envs=purge_envs)
                     sty_blocks += create_filecontents_block(name, content)
 
+    # Handle external .aux files
     aux_blocks = ""
     if include_external:
         for aux_base in extract_external_docs(main_content):
             aux_file = aux_base + ".aux"
-            if not os.path.exists(aux_file):
+            found_aux = find_file_in_folders(aux_file, ["output-subdoc"])
+            if not found_aux:
                 raise FileNotFoundError(f"Required external document file '{aux_file}' not found")
-            content = read_file_strip_comments(aux_file, remove_comments)
+            content = read_file_strip_comments(found_aux, remove_comments)
             content = remove_commands(content, remove_list=remove_list, purge_list=purge_list)
             content = remove_environments(content, remove_envs=remove_envs, purge_envs=purge_envs)
             aux_blocks += create_filecontents_block(aux_file, content)
