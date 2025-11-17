@@ -241,15 +241,20 @@ def create_filecontents_block(filename, content):
 
 def find_file_in_folders(filename, folders):
     """
-    Look for filename in the given list of folders.
+    Look for filename in the current working directory first,
+    then in the provided list of folders.
     Returns the full path to the first found file, or None if not found.
     """
+    # 1. Check current working directory
+    if os.path.exists(filename):
+        return filename
+
+    # 2. Check subfolders in order
     for folder in folders:
         path = os.path.join(folder, filename)
         if os.path.exists(path):
             return path
-    if os.path.exists(filename):
-        return filename
+
     return None
 
 
@@ -299,16 +304,18 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
             print(f"Warning: Could not download biblatex-readbbl.sty ({str(e)})")
             use_readbbl = False
 
+    # Always embed .bib files, even when -b or -B is used
     bib_blocks = ""
-    # Only process .bib files if neither -b nor -B is specified
-    if not (include_bbl or use_readbbl):
-        for bib in extract_bibliographies(main_content):
-            if not os.path.exists(bib):
-                raise FileNotFoundError(f"Required bibliography file '{bib}' not found")
-            content = read_file_strip_comments(bib, remove_comments)
-            content = remove_commands(content, remove_list=remove_list, purge_list=purge_list)
-            content = remove_environments(content, remove_envs=remove_envs, purge_envs=purge_envs)
-            bib_blocks += create_filecontents_block(bib, content)
+    for bib in extract_bibliographies(main_content):
+        if not os.path.exists(bib):
+            raise FileNotFoundError(f"Required bibliography file '{bib}' not found")
+
+        content = read_file_strip_comments(bib, remove_comments)
+        content = remove_commands(content, remove_list=remove_list, purge_list=purge_list)
+        content = remove_environments(content, remove_envs=remove_envs, purge_envs=purge_envs)
+
+        bib_blocks += create_filecontents_block(bib, content)
+
 
     # Handle .bbl file inclusion (for both -b and -B)
     bbl_block = ""
@@ -319,13 +326,15 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
         found_bbl = find_file_in_folders(bbl_file, ["output-subdoc"])
         if not found_bbl:
             raise FileNotFoundError(
-                f"Required .bbl file '{bbl_file}' not found in main folder or 'output-subdoc' subfolder. "
-                f"Please compile with biber/bibtex first to generate it."
+                f"Required .bbl file '{bbl_file}' not found in this folder or in 'output-subdoc'. "
+                f"Please run biber/bibtex before calling submit_latex()."
             )
+
         content = read_file_strip_comments(found_bbl, remove_comments=False)
         output_base = os.path.splitext(os.path.basename(output_file))[0]
         embedded_bbl_name = f"{output_base}.bbl"
         bbl_block = create_filecontents_block(embedded_bbl_name, content)
+
 
 
     sty_blocks = ""
@@ -346,13 +355,18 @@ def submit_latex(input_file, output_file, remove_comments, include_sty, include_
     if include_external:
         for aux_base in extract_external_docs(main_content):
             aux_file = aux_base + ".aux"
+
             found_aux = find_file_in_folders(aux_file, ["output-subdoc"])
             if not found_aux:
-                raise FileNotFoundError(f"Required external document file '{aux_file}' not found")
+                raise FileNotFoundError(
+                    f"Required external .aux file '{aux_file}' not found in this folder or in 'output-subdoc'."
+                )
+
             content = read_file_strip_comments(found_aux, remove_comments)
             content = remove_commands(content, remove_list=remove_list, purge_list=purge_list)
             content = remove_environments(content, remove_envs=remove_envs, purge_envs=purge_envs)
             aux_blocks += create_filecontents_block(aux_file, content)
+
 
     full_output = readbbl_block + bib_blocks + bbl_block + sty_blocks + aux_blocks + main_content
     with open(output_file, 'w', encoding='utf-8', newline='\n') as f:
